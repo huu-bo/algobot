@@ -7,9 +7,12 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define PORT 8080
+
 #define URL_MAX_SIZE 128 // includes null terminator
+#define BUFFER_SIZE  1024
 
 enum Http_method {
 	HTTP_METHOD_GET,
@@ -20,6 +23,7 @@ enum Http_method {
 // TODO: algo on browser + bot in server
 
 #include "status.h"
+#include "routes.h"
 
 // if message_size == -1, sends the status code as body. If message_size == -2, do not send Content-Length header
 void send_http_header(int fd, unsigned int http_status, ssize_t message_size) {
@@ -43,6 +47,8 @@ void send_http_header(int fd, unsigned int http_status, ssize_t message_size) {
 	if (message_size == -1) {
 		dprintf(fd, "%u %s", http_status, status_msg);
 	}
+
+	printf("status code %d %s\n", http_status, status_msg);
 }
 
 int main() {
@@ -147,6 +153,45 @@ url_ok:
 						 }
 		}
 		printf("%s\n", url);
+
+		struct Route *route = get_url_route(url);
+		if (route == NULL) {
+			send_http_header(client_fd, 404, -1);
+			close(client_fd);
+			continue;
+		}
+
+		if (route->type == ROUTE_FILE) {
+			FILE *page_file = fopen(route->file, "r");
+			if (page_file == NULL) {
+				fprintf(stderr, "error opening file '%s' for serving: %s\n", route->file, strerror(errno));
+				send_http_header(client_fd, 500, -1);
+				close(client_fd);
+				continue;
+			}
+
+			fseek(page_file, 0, SEEK_END);
+			size_t file_size = ftell(page_file);
+			fseek(page_file, 0, SEEK_SET);
+
+			send_http_header(client_fd, 200, file_size);
+
+			char *buffer[BUFFER_SIZE];
+			size_t length;
+			while ((length = fread(buffer, 1, BUFFER_SIZE, page_file)) != 0) {
+				if (write(client_fd, buffer, length) == -1) {
+					perror("error while serving file");
+				}
+			}
+
+			close(client_fd);
+			continue;
+		} else if (route->type == ROUTE_FUNC) {
+			route->func(client_fd);
+
+			close(client_fd);
+			continue;
+		}
 
 		send_http_header(client_fd, 500, -1);
 		close(client_fd);

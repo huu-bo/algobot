@@ -12,7 +12,7 @@ CC = gcc
 CFLAGS += -ggdb -pipe
 LDFLAGS += -ggdb
 
-SRCFILES = main.c status.c
+SRCFILES = main.c status.c routes.c
 
 OBJFILES = $(addprefix build/, $(patsubst %.c, %.o, $(SRCFILES)))
 
