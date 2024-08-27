@@ -1,6 +1,8 @@
 #ifndef ROUTES_H_
 #define ROUTES_H_
 
+#include "http.h"
+
 struct Route {
 	enum {
 		ROUTE_FILE,
@@ -10,7 +12,7 @@ struct Route {
 
 	union {
 		const char *file;
-		void (*func)();
+		void (*func)(enum Http_method);
 	};
 } extern routes[];
 

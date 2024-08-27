@@ -14,18 +14,13 @@
 #define URL_MAX_SIZE 128 // includes null terminator
 #define BUFFER_SIZE  1024
 
-enum Http_method {
-	HTTP_METHOD_GET,
-	HTTP_METHOD_POST
-};
-
 // TODO: request routing
 // TODO: algo on browser + bot in server
 
 #include "status.h"
 #include "routes.h"
+#include "http.h"
 
-// if message_size == -1, sends the status code as body. If message_size == -2, do not send Content-Length header
 void send_http_header(int fd, unsigned int http_status, ssize_t message_size) {
 	const char *status_msg = http_status_string(http_status);
 	if (status_msg == NULL) {
